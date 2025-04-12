@@ -1,0 +1,11 @@
+{
+  "version": "4",
+  "specifiers": {
+    "jsr:@divy/sdl2@0.14.0": "0.14.0"
+  },
+  "jsr": {
+    "@divy/sdl2@0.14.0": {
+      "integrity": "01347d34dd12cabd972eec340a142cdc6176f9e2720a72ab3515f73cf9d27bad"
+    }
+  }
+}

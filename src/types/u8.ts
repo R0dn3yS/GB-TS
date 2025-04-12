@@ -87,6 +87,6 @@ export class u8 {
   getSigned() {
     const isSigned = (this.value & 0b10000000) === 0b10000000;
     const value = (this.value & 0b01111111);
-    return isSigned ? value -127 : value;
+    return isSigned ? value - 127 : value;
   }
 }

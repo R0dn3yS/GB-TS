@@ -26,10 +26,14 @@ export class Cpu {
 
   run = true;
 
-  private memory = new Uint8Array(0xFFFF);
+  private memory = new Uint8Array(0xFFFF + 1);
 
   constructor() {
     this.memory.fill(0);
+  }
+
+  dumpMemory() {
+    Deno.writeFileSync('./dump.bin', this.memory);
   }
 
   incPc(amount?: number) {
@@ -49,6 +53,30 @@ export class Cpu {
 
     for (let i = 0; i < 0x0100; i++) {
       this.memory[i] = biosData[i];
+    }
+  }
+
+  loadInitialState() {
+    this.A.set(0x01);
+    this.B.set(0x00);
+    this.C.set(0x13);
+    this.D.set(0x00);
+    this.E.set(0xD8);
+    this.H.set(0x01);
+    this.L.set(0x4D);
+
+    this.pc.set(0x0100);
+    this.sp.set(0xFFFE);
+
+    this.flags.z.value = true;
+    this.flags.n.value = false;
+    this.flags.h.value = true;
+    this.flags.c.value = true;
+
+    const initData = Deno.readFileSync('./init.bin');
+
+    for (let i = 0; i <= 0xFF; i++) {
+      this.memory[0xFF00 + i] = initData[i];
     }
   }
 
@@ -73,30 +101,36 @@ export class Cpu {
     return op;
   }
 
-  execute(op: u8) {
-    executeInstruction(this, op);
+  execute(op: u8): number {
+    const c = executeInstruction(this, op);
+    return c;
   }
 
   pushStack(value: u8) {
     this.memory[this.sp.get()] = value.get();
-    this.sp.dec(1);
+
+    this.sp.wrappingDec(1);
     if (this.sp.get() < 0xFF80) this.sp.set(0xFFFE);
   }
 
   pushStack16(value: u16) {
-    const first = value.get() >> 8;
+    const first = (value.get() & 0xFF00) >> 8;
     const second = value.get() & 0xFF;
 
+    this.sp.wrappingDec(1);
+    if (this.sp.get() < 0xFF80) this.sp.set(0xFFFE);
+
     this.memory[this.sp.get()] = first;
-    this.memory[this.sp.get() - 4] = second;
-    this.sp.dec(1);
+
+    this.sp.wrappingDec(1);
     if (this.sp.get() < 0xFF80) this.sp.set(0xFFFE);
-    this.sp.dec(1);
-    if (this.sp.get() < 0xFF80) this.sp.set(0xFFFE);
+
+    this.memory[this.sp.get()] = second;
   }
 
   popStack(): u8 {
     const data = this.readMemory(this.sp);
+
     this.sp.wrappingAdd(1);
     if (this.sp.get() > 0xFFFE) this.sp.set(0xFF80);
 
@@ -104,11 +138,12 @@ export class Cpu {
   }
 
   popStack16(): u16 {
-    const hi = this.readMemory(this.sp);
+    const lo = this.readMemory(this.sp);
+
     this.sp.wrappingAdd(1);
     if (this.sp.get() > 0xFFFE) this.sp.set(0xFF80);
+    const hi = this.readMemory(this.sp);
 
-    const lo = this.readMemory(this.sp);
     this.sp.wrappingAdd(1);
     if (this.sp.get() > 0xFFFE) this.sp.set(0xFF80);
 

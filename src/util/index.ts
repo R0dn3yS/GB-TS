@@ -27,12 +27,13 @@ export function readState(cpu: Cpu) {
     mem.push(getString8(cpu.readMemory(pc).get()));
   }
 
-  const otherMem: string[] = [];
-  for (let i = 0; i < 8; i++) {
-    const c = new u16(0xFF0F + i);
-    otherMem.push(getString8(cpu.readMemory(c).get()));
-  }
+  // const otherMem: string[] = [];
+  // for (let i = 0; i < 8; i++) {
+  //   const c = new u16(0xFFFF - i);
+  //   otherMem.push(getString8(cpu.readMemory(c).get()));
+  // }
 
   console.log(`\nMemory: ${mem}\n`);
+  console.log(`0xFF44: ${getString8(cpu.readMemory(new u16(0xFF44)).get())}`);
   // console.log(`\nOther memory: ${otherMem}\n`);
 }

@@ -1,5 +1,6 @@
 import { u16 } from '../types/u16.ts';
 import { u8 } from '../types/u8.ts';
+import { getString16, getString8 } from '../util/index.ts';
 import { Cpu } from './index.ts';
 
 const bits = [
@@ -55,6 +56,7 @@ export function CALL(cpu: Cpu, address: u16) {
 
 export function JR(cpu: Cpu, jump: number) {
   if (jump > 0) {
+    cpu.incPc();
     cpu.pc.wrappingAdd(jump);
   } else if (jump < 0) {
     cpu.pc.wrappingDec(jump *= -1);
@@ -90,9 +92,11 @@ export function LDHR(cpu: Cpu, from: u8, to: u8) {
   const address = new u16(from.get());
   address.wrappingAdd(0xFF00);
 
-  if (to.get() >= 0xFF00 && to.get() <= 0xFFFF) {
+  console.log(`Address: ${getString16(address.get())}\nValue: ${getString8(cpu.readMemory(address).get())}`);
+
+  if (address.get() >= 0xFF00 && address.get() <= 0xFFFF) {
     const data = cpu.readMemory(address);
-    LDR(cpu, data, to);
+    to.set(data.get());
   }
 }
 
@@ -144,6 +148,17 @@ export function LDD(cpu: Cpu) {
 
   cpu.writeHL(HL);
   
+  return;
+}
+
+export function LDI(cpu: Cpu) {
+  const HL = cpu.getHL();
+  cpu.writeMemory(HL, cpu.A);
+
+  HL.wrappingAdd(1);
+
+  cpu.writeHL(HL);
+
   return;
 }
 
@@ -199,6 +214,44 @@ export function INC(cpu: Cpu, register: u8) {
   cpu.flags.z.value = result === 0;
   cpu.flags.n.value = false;
   cpu.flags.h.value = (((initial & 0xF) + (1 & 0xF)) & 0x10) === 0x10;
+}
+
+export function INC16(cpu: Cpu, register: 'BC'|'DE'|'HL'|'SP') {
+  switch (register) {
+    case ('BC'): {
+      const initial = cpu.getBC();
+      initial.wrappingAdd(1);
+
+      cpu.writeBC(initial);
+
+      break;
+    }
+
+    case ('DE'): {
+      const initial = cpu.getDE();
+      initial.wrappingAdd(1);
+
+      cpu.writeDE(initial);
+
+      break;
+    }
+
+    case ('HL'): {
+      const initial = cpu.getHL();
+      initial.wrappingAdd(1);
+
+      cpu.writeHL(initial);
+
+      break;
+    }
+
+    case ('SP'): {
+      cpu.sp.wrappingAdd(1);
+      if (cpu.sp.get() > 0xFFFE) cpu.sp.set(0xFF80);
+
+      break;
+    }
+  }
 }
 
 export function PUSH(cpu: Cpu, register: 'AF'|'BC'|'DE'|'HL') {
@@ -263,6 +316,14 @@ export function POP(cpu: Cpu, register: 'AF'|'BC'|'DE'|'HL') {
       break;
     }
   }
+}
+
+export function RET(cpu: Cpu) {
+  const address = cpu.popStack16();
+
+  cpu.pc.set(address.get());
+
+  return;
 }
 
 export function RES(_cpu: Cpu, bit: number, register: u8) {
